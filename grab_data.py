@@ -1,5 +1,7 @@
 import numpy as np
 import math
+import os
+import glob
 import scipy.interpolate as interp
 from scipy.signal import detrend
 from scipy import signal
@@ -176,6 +178,15 @@ def orient_acc(data, sleeve_num=0):
         dist_z.append(temp_dist[2])
         dist_t.append(t_dist_acc[i])
     return prox_t, prox_x, prox_y, prox_z, dist_t, dist_x, dist_y, dist_z
+
+
+def get_most_recent_file(directory):
+    files = glob.glob(directory + '/*')
+    if len(files) == 0:
+        return None
+    most_recent_file = max(files, key=os.path.getctime)
+    return most_recent_file
+
 
 
 
