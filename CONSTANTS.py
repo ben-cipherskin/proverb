@@ -1,0 +1,1 @@
+lap_distance = 15  # meters
