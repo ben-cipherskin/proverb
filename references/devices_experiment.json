@@ -1,0 +1,7 @@
+{
+  "jumps": {
+    "armsleeve-3x5-rocket-jumps": ["chronojump", "sleeve"],
+    "legsleeve-3x5-rocket-jumps": ["chronojump", "sleeve"],
+    "leggings-3x5-rocket-jumps": ["chronojump", "sleeve"]
+  }
+}
