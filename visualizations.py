@@ -17,7 +17,10 @@ def plot_motion(time_signal_proximal, main_signal_proximal, time_signal_distal, 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         subplot_titles=('Proximal', 'Distal'))
     # Check if the signal is a 3D signal
-    if isinstance(main_signal_proximal[0], list):
+    if isinstance(main_signal_proximal[0], (list, np.ndarray)):
+        if isinstance(time_signal_proximal, np.ndarray): time_signal_proximal = time_signal_proximal.tolist()
+        if isinstance(time_signal_distal, np.ndarray): time_signal_distal = time_signal_distal.tolist()
+
         # Add the proximal signal to the first subplot
         fig.add_trace(
             go.Scatter(x=time_signal_proximal, y=[val[0] for val in main_signal_proximal], mode='lines', name='X',
@@ -42,7 +45,7 @@ def plot_motion(time_signal_proximal, main_signal_proximal, time_signal_distal, 
                                  legendgroup=2),
                       row=2, col=1)
     # Check if the signal is a 1D signal and motion data
-    elif isinstance(main_signal_proximal[0], np.float64) and ('Gyro' in title or 'Acc' in title):
+    elif isinstance(main_signal_proximal[0], (np.float64, float)) and ('Gyro' in title or 'Acc' in title):
         # Add the proximal signal to the first subplot
         fig.add_trace(go.Scatter(x=time_signal_proximal, y=main_signal_proximal, mode='lines', name='RMS Proximal',
                                  legendgroup=1),
@@ -52,7 +55,7 @@ def plot_motion(time_signal_proximal, main_signal_proximal, time_signal_distal, 
             go.Scatter(x=time_signal_distal, y=main_signal_distal, mode='lines', name='RMS Distal', legendgroup=2),
             row=2, col=1)
         # Check if signal is a 1D signal and joint angles
-    elif isinstance(main_signal_proximal[0], np.float64) and 'Angle' in title:
+    elif isinstance(main_signal_proximal[0], (np.float64, float)) and 'Angle' in title:
         # Add the proximal signal to the first subplot
         fig.add_trace(go.Scatter(x=time_signal_proximal, y=main_signal_proximal, mode='lines', name='Angle Proximal',
                                  legendgroup=1),

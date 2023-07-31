@@ -48,22 +48,31 @@ def calculate_rms(prox_t, prox, dist_t, dist, filter=False):
     :param filter: bool; whether or not to filter data
     :return: prox_t, prox_rms, dist_t, dist_rms: lists; calculated rms data and altered timestamps (if filtered)
     """
+    # Extracting signal components
+    prox_x = [val[0] for val in prox]
+    prox_y = [val[1] for val in prox]
+    prox_z = [val[2] for val in prox]
+
+    dist_x = [val[0] for val in dist]
+    dist_y = [val[1] for val in dist]
+    dist_z = [val[2] for val in dist]
+
     if filter:
         highcut = 0.15  # Hz
         fs = 100  # Hz
         order = 2
         # Error handling for cases where timestamps have multiple zero starts
-        if prox_times[1] == 0.0:
-            prox_times[1] = 0.01
-        prox_xt, prox_x = interpolate_to_hz(prox_times, prox_x, fs, detrend_signal=True, order=1)
-        prox_yt, prox_y = interpolate_to_hz(prox_times, prox_y, fs, detrend_signal=True, order=1)
-        prox_times, prox_z = interpolate_to_hz(prox_times, prox_z, fs, detrend_signal=True, order=1)
+        if prox_t[1] == 0.0:
+            prox_t[1] = 0.01
+        _, prox_x = interpolate_to_hz(prox_t, prox_x, fs, detrend_signal=True, order=1)
+        _, prox_y = interpolate_to_hz(prox_t, prox_y, fs, detrend_signal=True, order=1)
+        prox_t, prox_z = interpolate_to_hz(prox_t, prox_z, fs, detrend_signal=True, order=1)
         # Error handling for cases where timestamps have multiple zero starts
-        if dist_times[1] == 0.0:
-            dist_times[1] = 0.01
-        dist_xt, dist_x = interpolate_to_hz(dist_times, dist_x, fs, detrend_signal=True, order=1)
-        dist_yt, dist_y = interpolate_to_hz(dist_times, dist_y, fs, detrend_signal=True, order=1)
-        dist_times, dist_z = interpolate_to_hz(dist_times, dist_z, fs, detrend_signal=True, order=1)
+        if dist_t[1] == 0.0:
+            dist_t[1] = 0.01
+        _, dist_x = interpolate_to_hz(dist_t, dist_x, fs, detrend_signal=True, order=1)
+        _, dist_y = interpolate_to_hz(dist_t, dist_z, fs, detrend_signal=True, order=1)
+        dist_t, dist_z = interpolate_to_hz(dist_t, dist_z, fs, detrend_signal=True, order=1)
 
         # Applying lowpass filter to quaternion components
         prox_x = (butter_lowpass(prox_x, highcut=highcut, fs=fs, order=order))
@@ -73,6 +82,17 @@ def calculate_rms(prox_t, prox, dist_t, dist, filter=False):
         dist_x = (butter_lowpass(dist_x, highcut=highcut, fs=fs, order=order))
         dist_y = (butter_lowpass(dist_y, highcut=highcut, fs=fs, order=order))
         dist_z = (butter_lowpass(dist_z, highcut=highcut, fs=fs, order=order))
+
+    # Initialize empty mutable arrays for RMS values
+    rms_prox = [0] * len(prox_x)
+    rms_dist = [0] * len(dist_x)
+    for j in range(len(prox_x)):
+        rms_prox[j] = math.sqrt(((prox_x[j] ** 2) + (prox_y[j] ** 2) +
+                                   (prox_z[j] ** 2)) / 3)
+    for j in range(len(dist_x)):
+        rms_dist[j] = math.sqrt(((dist_x[j] ** 2) + (dist_y[j] ** 2) +
+                                   (dist_z[j] ** 2)) / 3)
+    return prox_t, rms_prox, dist_t, rms_dist
 
 
 
@@ -211,10 +231,14 @@ def orient_acc(data, sleeve_num=0):
     # Declare empty mutable oriented arrays of length shortest_len
     oriented_prox = [0] * shortest_len
     oriented_dist = [0] * shortest_len
+    oriented_prox_t = [0] * shortest_len
+    oriented_dist_t = [0] * shortest_len
     for i in range(shortest_len):
+        oriented_prox_t[i] = t_prox_acc[i]
         oriented_prox[i] = prox_quat[i].rotate(prox_acc[i])
+        oriented_dist_t[i] = t_dist_acc[i]
         oriented_dist[i] = dist_quat[i].rotate(dist_acc[i])
-    return t_prox_acc, oriented_prox, t_dist_acc, oriented_dist
+    return oriented_prox_t, oriented_prox, oriented_dist_t, oriented_dist
 
 
 def get_ja(data, location, sleeve_num=0):
