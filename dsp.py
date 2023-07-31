@@ -60,6 +60,22 @@ def time_to_seconds(times):
     return seconds
 
 
+def transform_global_t(global_t):
+    """
+    :param global_t: array of strings containing time information as coming from the sleeve.
+    :return: array of floats with time information in seconds with first one being 0.
+    """
+    zero_t = dt.datetime.strptime(global_t[0].replace("T", " ").replace("Z", ""), "%Y-%m-%d %H:%M:%S.%f")
+    new_times = []
+    # Calculate time from start time in minutes
+    for t in global_t:
+        try:
+            new_times.append((dt.datetime.strptime(t.replace("T", " ").replace("Z", ""), "%Y-%m-%d %H:%M:%S.%f") - zero_t).total_seconds())
+        except ValueError:
+            new_times.append((dt.datetime.strptime(t.replace("T", " ").replace("Z", ""), "%Y-%m-%d %H:%M:%S") - zero_t).total_seconds())
+    return new_times
+
+
 def fft_calc(section, fs, pad_len):
     """
     :param section:
@@ -99,3 +115,57 @@ def calc_dom_freq_general(t_signal, signal, interpolation_freq=50, start_idx_lag
     plotting_data["y"] = y
     plotting_data["Dom X"] = dom_x
     return plotting_data
+
+
+def filter_3d_signal(time_series, signals, order=2, highcut=100, lowcut=0, bandpass=False, highpass=False):
+    """
+    Function to filter 3d signal using a butterworth filter as implemented in scipy. The filter is applied to each axis
+    of the signal separately and then combined again and returned.
+    :param time_series: list; time information of the signal
+    :param signals: list of lists; the 3d signal
+    :param order: int; the order of the butterworth filter
+    :param highcut: float; the highcut frequency in Hz
+    :param lowcut: float; the lowcut frequency in Hz
+    :param bandpass: bool; whether or not to apply a bandpass filter
+    :param highpass: bool; whether or not to apply a highpass filter
+    :return time_series: list; time information of the signal
+    :return final_signals: list of lists; the filtered 3d signal
+    """
+    if bandpass:
+        if highpass:
+            print("Both bandpass and highpass are True. Please choose only one.")
+            return
+        else:
+            print("Filtering with bandpass filter.")
+    elif highpass:
+        print("Filtering with highpass filter.")
+    else:
+        print("No filtering applied.")
+        return time_series, signals
+
+    # Convert to numpy array
+    signals = np.array(signals)
+    # Get sampling frequency
+    fs = 1 / (time_series[1] - time_series[0])
+    # Get nyquist frequency
+    nyq = 0.5 * fs
+    # Get cutoff frequencies
+    high = highcut / nyq
+    low = lowcut / nyq
+    # Get filter order
+    order = 2
+    # Get filter type
+    if bandpass:
+        btype = "band"
+    elif highpass:
+        btype = "high"
+    else:
+        btype = "low"
+    # Get filter coefficients
+    sos = signal.butter(order, [low, high], btype=btype, output='sos')
+    # Apply filter to each axis
+    filtered_signals = signal.sosfilt(sos, signals, axis=0)
+    # Convert back to list
+    final_signals = filtered_signals.tolist()
+    return time_series, final_signals
+

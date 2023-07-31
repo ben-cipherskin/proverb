@@ -6,7 +6,7 @@ import scipy.interpolate as interp
 from scipy.signal import detrend
 from scipy import signal
 from pyquaternion import Quaternion
-from dsp import time_to_seconds, interpolate_to_hz, butter_lowpass
+from dsp import time_to_seconds, interpolate_to_hz, butter_lowpass, transform_global_t
 
 
 def get_gyro(data, sleeve_num=0):
@@ -37,64 +37,106 @@ def get_gyro(data, sleeve_num=0):
     return prox_gyro_t, prox_gyro, dist_gyro_t, dist_gyro
 
 
-def get_gyro_rms(data, filt=False):
+def calculate_rms(prox_t, prox, dist_t, dist, filter=False):
+    """
+    function to calculate rms of gyro data and optionally filter it
+
+    :param prox_t: list; timestamps of proximal data
+    :param prox: list; proximal data
+    :param dist_t: list; timestamps of distal data
+    :param dist: list; distal data
+    :param filter: bool; whether or not to filter data
+    :return: prox_t, prox_rms, dist_t, dist_rms: lists; calculated rms data and altered timestamps (if filtered)
+    """
+    if filter:
+        highcut = 0.15  # Hz
+        fs = 100  # Hz
+        order = 2
+        # Error handling for cases where timestamps have multiple zero starts
+        if prox_times[1] == 0.0:
+            prox_times[1] = 0.01
+        prox_xt, prox_x = interpolate_to_hz(prox_times, prox_x, fs, detrend_signal=True, order=1)
+        prox_yt, prox_y = interpolate_to_hz(prox_times, prox_y, fs, detrend_signal=True, order=1)
+        prox_times, prox_z = interpolate_to_hz(prox_times, prox_z, fs, detrend_signal=True, order=1)
+        # Error handling for cases where timestamps have multiple zero starts
+        if dist_times[1] == 0.0:
+            dist_times[1] = 0.01
+        dist_xt, dist_x = interpolate_to_hz(dist_times, dist_x, fs, detrend_signal=True, order=1)
+        dist_yt, dist_y = interpolate_to_hz(dist_times, dist_y, fs, detrend_signal=True, order=1)
+        dist_times, dist_z = interpolate_to_hz(dist_times, dist_z, fs, detrend_signal=True, order=1)
+
+        # Applying lowpass filter to quaternion components
+        prox_x = (butter_lowpass(prox_x, highcut=highcut, fs=fs, order=order))
+        prox_y = (butter_lowpass(prox_y, highcut=highcut, fs=fs, order=order))
+        prox_z = (butter_lowpass(prox_z, highcut=highcut, fs=fs, order=order))
+
+        dist_x = (butter_lowpass(dist_x, highcut=highcut, fs=fs, order=order))
+        dist_y = (butter_lowpass(dist_y, highcut=highcut, fs=fs, order=order))
+        dist_z = (butter_lowpass(dist_z, highcut=highcut, fs=fs, order=order))
+
+
+
+def get_rms(data, gyro=True, filt=False):
     """
 
     :param filt:
     :param data:
     :return:
     """
-    gyros = get_gyro(data, sleeve_num=0)
-    prox_gyro_t, prox_gyro, dist_gyro_t, dist_gyro = gyros[0], gyros[1], gyros[2], gyros[3]
+    if gyro:
+        grabbed_data = get_gyro(data, sleeve_num=0)
+    else:
+        grabbed_data = get_acc(data, sleeve_num=0)
+    prox_t, prox_data, dist_t, dist_data = grabbed_data[0], grabbed_data[1], grabbed_data[2], grabbed_data[3]
 
     # Extracting quaternion components
-    gyroprox_x = [val[0] for val in prox_gyro]
-    gyroprox_y = [val[1] for val in prox_gyro]
-    gyroprox_z = [val[2] for val in prox_gyro]
+    prox_x = [val[0] for val in prox_data]
+    prox_y = [val[1] for val in prox_data]
+    prox_z = [val[2] for val in prox_data]
 
-    gyrodist_x = [val[0] for val in dist_gyro]
-    gyrodist_y = [val[1] for val in dist_gyro]
-    gyrodist_z = [val[2] for val in dist_gyro]
+    dist_x = [val[0] for val in dist_data]
+    dist_y = [val[1] for val in dist_data]
+    dist_z = [val[2] for val in dist_data]
 
     # Putting data in dictionary for plotting purposes
-    gyro_prox_times = time_to_seconds(prox_gyro_t)
-    gyro_dist_times = time_to_seconds(dist_gyro_t)
+    prox_times = time_to_seconds(prox_t)
+    dist_times = time_to_seconds(dist_t)
 
     if filt:
         highcut = 0.15  # Hz
         fs = 100  # Hz
         order = 2
         # Error handling for cases where timestamps have multiple zero starts
-        if gyro_prox_times[1] == 0.0:
-            gyro_prox_times[1] = 0.01
-        gyroprox_xt, gyroprox_x = interpolate_to_hz(gyro_prox_times, gyroprox_x, fs, detrend_signal=True, order=1)
-        gyroprox_yt, gyroprox_y = interpolate_to_hz(gyro_prox_times, gyroprox_y, fs, detrend_signal=True, order=1)
-        gyro_prox_times, gyroprox_z = interpolate_to_hz(gyro_prox_times, gyroprox_z, fs, detrend_signal=True, order=1)
+        if prox_times[1] == 0.0:
+            prox_times[1] = 0.01
+        prox_xt, prox_x = interpolate_to_hz(prox_times, prox_x, fs, detrend_signal=True, order=1)
+        prox_yt, prox_y = interpolate_to_hz(prox_times, prox_y, fs, detrend_signal=True, order=1)
+        prox_times, prox_z = interpolate_to_hz(prox_times, prox_z, fs, detrend_signal=True, order=1)
         # Error handling for cases where timestamps have multiple zero starts
-        if gyro_dist_times[1] == 0.0:
-            gyro_dist_times[1] = 0.01
-        gyrodist_xt, gyrodist_x = interpolate_to_hz(gyro_dist_times, gyrodist_x, fs, detrend_signal=True, order=1)
-        gyrodist_yt, gyrodist_y = interpolate_to_hz(gyro_dist_times, gyrodist_y, fs, detrend_signal=True, order=1)
-        gyro_dist_times, gyrodist_z = interpolate_to_hz(gyro_dist_times, gyrodist_z, fs, detrend_signal=True, order=1)
+        if dist_times[1] == 0.0:
+            dist_times[1] = 0.01
+        dist_xt, dist_x = interpolate_to_hz(dist_times, dist_x, fs, detrend_signal=True, order=1)
+        dist_yt, dist_y = interpolate_to_hz(dist_times, dist_y, fs, detrend_signal=True, order=1)
+        dist_times, dist_z = interpolate_to_hz(dist_times, dist_z, fs, detrend_signal=True, order=1)
 
         # Applying lowpass filter to quaternion components
-        gyroprox_x = (butter_lowpass(gyroprox_x, highcut=highcut, fs=fs, order=order))
-        gyroprox_y = (butter_lowpass(gyroprox_y, highcut=highcut, fs=fs, order=order))
-        gyroprox_z = (butter_lowpass(gyroprox_z, highcut=highcut, fs=fs, order=order))
+        prox_x = (butter_lowpass(prox_x, highcut=highcut, fs=fs, order=order))
+        prox_y = (butter_lowpass(prox_y, highcut=highcut, fs=fs, order=order))
+        prox_z = (butter_lowpass(prox_z, highcut=highcut, fs=fs, order=order))
 
-        gyrodist_x = (butter_lowpass(gyrodist_x, highcut=highcut, fs=fs, order=order))
-        gyrodist_y = (butter_lowpass(gyrodist_y, highcut=highcut, fs=fs, order=order))
-        gyrodist_z = (butter_lowpass(gyrodist_z, highcut=highcut, fs=fs, order=order))
+        dist_x = (butter_lowpass(dist_x, highcut=highcut, fs=fs, order=order))
+        dist_y = (butter_lowpass(dist_y, highcut=highcut, fs=fs, order=order))
+        dist_z = (butter_lowpass(dist_z, highcut=highcut, fs=fs, order=order))
 
     rms_prox = []
     rms_dist = []
-    for j in range(len(gyroprox_x)):
-        rms_prox.append(math.sqrt(((gyroprox_x[j] ** 2) + (gyroprox_y[j] ** 2) +
-                                   (gyroprox_z[j] ** 2)) / 3))
-    for j in range(len(gyrodist_x)):
-        rms_dist.append(math.sqrt(((gyrodist_x[j] ** 2) + (gyrodist_y[j] ** 2) +
-                                   (gyrodist_z[j] ** 2)) / 3))
-    return gyro_prox_times, rms_prox, gyro_dist_times, rms_dist
+    for j in range(len(prox_x)):
+        rms_prox.append(math.sqrt(((prox_x[j] ** 2) + (prox_y[j] ** 2) +
+                                   (prox_z[j] ** 2)) / 3))
+    for j in range(len(dist_x)):
+        rms_dist.append(math.sqrt(((dist_x[j] ** 2) + (dist_y[j] ** 2) +
+                                   (dist_z[j] ** 2)) / 3))
+    return prox_times, rms_prox, dist_times, rms_dist
 
 
 def get_quat(data, sleeve_num=0):
@@ -164,20 +206,102 @@ def orient_acc(data, sleeve_num=0):
     """
     [_, prox_quat, _, dist_quat] = get_quat(data, sleeve_num=sleeve_num)
     [t_prox_acc, prox_acc, t_dist_acc, dist_acc] = get_acc(data, sleeve_num=sleeve_num)
-    prox_x, dist_x, prox_y, dist_y, prox_z, dist_z, prox_t, dist_t = [], [], [], [], [], [], [], []
+
     shortest_len = min([len(l) for l in [prox_quat, dist_quat, prox_acc, dist_acc, t_prox_acc, t_dist_acc]])
+    # Declare empty mutable oriented arrays of length shortest_len
+    oriented_prox = [0] * shortest_len
+    oriented_dist = [0] * shortest_len
     for i in range(shortest_len):
-        temp_prox = prox_quat[i].rotate(prox_acc[i])
-        temp_dist = dist_quat[i].rotate(dist_acc[i])
-        prox_x.append(temp_prox[0])
-        prox_y.append(temp_prox[1])
-        prox_z.append(temp_prox[2])
-        prox_t.append(t_prox_acc[i])
-        dist_x.append(temp_dist[0])
-        dist_y.append(temp_dist[1])
-        dist_z.append(temp_dist[2])
-        dist_t.append(t_dist_acc[i])
-    return prox_t, prox_x, prox_y, prox_z, dist_t, dist_x, dist_y, dist_z
+        oriented_prox[i] = prox_quat[i].rotate(prox_acc[i])
+        oriented_dist[i] = dist_quat[i].rotate(dist_acc[i])
+    return t_prox_acc, oriented_prox, t_dist_acc, oriented_dist
+
+
+def get_ja(data, location, sleeve_num=0):
+    """
+
+    Parameters
+    ----------
+    data: dict; containing all the sleeve data
+    location: str; specifying the location of the joint getting the data for.
+
+    Returns 4 array containing: time stamps for joint angles, joint angles, time stamps for joint angle rates, joint angle rates
+    -------
+
+    """
+    t_ja, ja, t_ja_prox, ja_prox = [], [], [], []
+    for file_location_angles_dict in data['rawData']['metrics']['Recorded Angles']:
+        if type(file_location_angles_dict['Joint Location Name']) == int:
+            if location == file_location_angles_dict['Joint Location Name']:
+                pass
+            else:
+                continue
+        try:
+            if location in file_location_angles_dict["Joint Location Name"]:
+                for angles in file_location_angles_dict['Joint Angles']:
+                    t_ja.append(angles['time'])
+                    ja.append(angles['value'])
+        except TypeError:  # This try and except function is needed for a bug in 0.755.4 DM release
+            if type(file_location_angles_dict["Joint Location Name"]) == int:
+                for angles in file_location_angles_dict['Joint Angles']:
+                    t_ja.append(angles['time'])
+                    ja.append(angles['value'])
+
+        try:
+            if location in file_location_angles_dict["Joint Location Name"]:
+                for angles in file_location_angles_dict['Proximal Limb Flexion Extension Angles']:
+                    t_ja_prox.append(angles['time'])
+                    ja_prox.append(angles['value'])
+        except TypeError:  # This try and except function is needed for a bug in 0.755.4 DM release
+            if type(file_location_angles_dict["Joint Location Name"]) == int:
+                for angles in file_location_angles_dict['Proximal Limb Flexion Extension Angles']:
+                    t_ja_prox.append(angles['time'])
+                    ja_prox.append(angles['value'])
+    return transform_global_t(t_ja), ja, transform_global_t(t_ja_prox), ja_prox
+
+
+def get_prox_ja_w_time(data, location, sleeve_num=0):
+    """
+
+    Parameters
+    ----------
+    data: dict; containing all the sleeve data
+    location: str; specifying the location of the joint getting the data for.
+
+    Returns 4 array containing: time stamps for proximal joint angles, proximal joint angles, time stamps for proximal joint angle rates, proximal joint angle rates
+    -------
+
+    """
+    # TODO: Remove this when a new app is pushed that resolves this issue
+    if type(data['rawData']['metrics']['Recorded Angles'][0]['Joint Location Name']) == int:
+        if 'Right' in location:
+            location = 2
+        elif 'Left' in location:
+            location = 4
+    t_ja, ja, t_jar, jar = [], [], [], []
+    for file_location_angles_dict in data['rawData']['metrics']['Recorded Angles']:
+        if type(file_location_angles_dict['Joint Location Name']) == int:
+            if file_location_angles_dict['Joint Location Name'] == location:
+                pass
+            else:
+                continue
+        try:
+            if location in file_location_angles_dict["Joint Location Name"]:
+                for angles in file_location_angles_dict['Proximal Limb Flexion Extension Angles']:
+                    t_ja.append(angles['time'])
+                    ja.append(angles['value'])
+                for joint_angle_rates in file_location_angles_dict['Proximal Limb Flexion Extension Angle Rates']:
+                    t_jar.append(joint_angle_rates['time'])
+                    jar.append(joint_angle_rates['value'])
+        except TypeError:  # This try and except function is needed for a bug in 0.755.4 DM release
+            if type(file_location_angles_dict["Joint Location Name"]) == int:
+                for angles in file_location_angles_dict['Proximal Limb Flexion Extension Angles']:
+                    t_ja.append(angles['time'])
+                    ja.append(angles['value'])
+                for joint_angle_rates in file_location_angles_dict['Proximal Limb Flexion Extension Angle Rates']:
+                    t_jar.append(joint_angle_rates['time'])
+                    jar.append(joint_angle_rates['value'])
+    return transform_global_t(t_ja), ja, transform_global_t(t_jar), jar
 
 
 def get_most_recent_file(directory):
