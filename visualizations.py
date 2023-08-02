@@ -85,10 +85,15 @@ def plot_fft(time_signal, main_signal, title):
     mean_signal = np.mean(main_signal)
     normalized_signal = main_signal - mean_signal
 
+    # Interpolate the normalized signal to a constant sampling rate of 50 Hz
+    num_samples = int((time_signal[-1] - time_signal[0]) * 50)
+    time_signal = np.linspace(time_signal[0], time_signal[-1], num=num_samples)
+    # Average the timesteps of the entire signal to approximate the sampling rate
+    timestep = np.mean(np.diff(time_signal))
+
     # Calculate the Fast Fourier Transform (FFT) of the normalized signal
     fft_result = np.fft.fft(normalized_signal)
     n = len(fft_result)
-    timestep = time_signal[1] - time_signal[0]
     frequencies = np.fft.fftfreq(n, d=timestep)
 
     # Only consider non-negative frequencies (positive side of the spectrum)
@@ -109,7 +114,7 @@ def plot_fft(time_signal, main_signal, title):
                              mode='lines', name='FFT Magnitude'))
     # Add x on the plot for the peak frequency
     fig.add_trace(go.Scatter(x=[peak_freq], y=[peak_mag],
-                                mode='markers', name='Peak Frequency'))
+                                mode='markers', name=f'Peak @ {peak_freq:.2f} Hz'))
 
     # Add the frequency of peak to the title
     title += f' (Peak @ {peak_freq:.2f} Hz)'

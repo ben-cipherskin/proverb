@@ -1,10 +1,56 @@
 {
+  "20230630": {
+    "Test1": {
+        "Filenames": [
+            "SessionId_9421_User_Id_158_Record_Type_Sit_To_Stand_Test_2023-06-30T19:44:58.zip"
+        ],
+        "Experiment": "sit_to_stand-test",
+        "notes": ""
+        },
+    "Test2": {
+        "Filenames": [
+            "SessionId_9422_User_Id_158_Record_Type_Sit_To_Stand_Test_2023-06-30T19:46:05.zip"
+        ],
+        "Experiment": "sit_to_stand-test",
+        "notes": ""
+        },
+    "Test3": {
+        "Filenames": [
+            "SessionId_9423_User_Id_158_Record_Type_Sit_To_Stand_Test_2023-06-30T19:46:59.zip"
+        ],
+        "Experiment": "sit_to_stand-test",
+        "notes": ""
+        },
+    "Test4": {
+        "Filenames": [
+            "SessionId_9356_User_Id_158_Record_Type_6_Minute_Walk_Test_2023-05-25T19:13:24.zip"
+        ],
+        "Experiment": "6MWT-test",
+        "notes": ""
+        }
+    },
   "20230710": {
     "Suzanne1": {
       "Filenames": [
         "SessionId_9458_User_Id_158_Record_Type_Sit_To_Stand_Test_2023-07-10T23:34:55.zip"
       ],
       "Experiment": "sit_to_stand-test",
+      "notes": ""
+    }
+  },
+  "20230727": {
+    "User548-1": {
+      "Filenames": [
+        "SessionId_9488_User_Id_548_Record_Type_Sit_To_Stand_Test_2023-07-27T14:28:04.zip"
+      ],
+      "Experiment": "sit_to_stand-study",
+      "notes": ""
+    },
+    "User548-2": {
+      "Filenames": [
+        "SessionId_9488_User_Id_548_Record_Type_6_Minute_Walk_Test_2023-07-27T14:42:37.zip"
+      ],
+      "Experiment": "6MWT-study",
       "notes": ""
     }
   }

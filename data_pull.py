@@ -18,7 +18,7 @@ s3 = boto3.resource('s3')
 
 # Variables
 check_if_exists = True
-pull_experiment = ['sit_to_stand']
+pull_experiment = ['6MWT']
 all_data_to = Path.cwd() / 'data' / 'raw'
 make_folder(all_data_to)
 max_exp_to_grab = 20
